@@ -1,0 +1,19 @@
+meta {
+  name: Task Statistics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/tasks/statistics
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~projectId: {{projectId}}
+}
+
+docs {
+  Needs `reports:view`. Optional `projectId` scopes the numbers to one project.
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Edit Comment
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/api/comments/{{commentId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "content": "Edited comment text"
+  }
+}
+
+docs {
+  Author-only (`comments:edit`). A different user gets 403. Run Tasks / Add Comment first.
+}

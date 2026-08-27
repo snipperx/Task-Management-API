@@ -1,0 +1,23 @@
+meta {
+  name: Update Project
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/projects/{{projectId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Bruno Project (renamed)",
+    "description": "Updated from Bruno",
+    "status": "Active"
+  }
+}
+
+docs {
+  `status`: Active | Completed | Archived. Setting Completed stamps `completedAt`.
+}

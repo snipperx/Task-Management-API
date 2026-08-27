@@ -15,6 +15,13 @@ coverage*.info
 *.coverage
 coveragereport/
 
+## Verify snapshot testing — received files are transient, verified files are committed
+*.received.*
+
+## k6
+load/*-summary.json
+load/*.log
+
 ## Env / secrets
 .env
 *.env.local
@@ -25,6 +32,9 @@ src/TaskManagementAPI/appsettings.Local.json
 .idea/
 .vscode/
 *.DotSettings.user
+
+## Bruno editor temp files
+*.bru.tmp.*
 
 ## OS
 .DS_Store

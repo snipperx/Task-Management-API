@@ -1,0 +1,4 @@
+﻿{
+  Status: 409,
+  Message: Cannot move a task from ToDo to Done. Allowed flow: ToDo → InProgress → InReview → Done.
+}

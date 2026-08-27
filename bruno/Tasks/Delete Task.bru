@@ -1,0 +1,15 @@
+meta {
+  name: Delete Task
+  type: http
+  seq: 12
+}
+
+delete {
+  url: {{baseUrl}}/api/tasks/{{taskId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Soft delete. Needs `tasks:delete`.
+}

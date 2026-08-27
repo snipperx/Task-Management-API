@@ -1,0 +1,21 @@
+meta {
+  name: Update Task
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/tasks/{{taskId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "Bruno task (edited)",
+    "description": "Updated from Bruno",
+    "estimatedHours": 6,
+    "actualHours": 2,
+    "dueDate": "2030-02-01T00:00:00Z"
+  }
+}

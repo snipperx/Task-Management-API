@@ -1,0 +1,11 @@
+meta {
+  name: Get Task
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/tasks/{{taskId}}
+  body: none
+  auth: inherit
+}

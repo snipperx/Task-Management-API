@@ -1,0 +1,32 @@
+meta {
+  name: Create Project
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/projects
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Bruno Project",
+    "description": "Created from the Bruno collection"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("projectId", res.body.id);
+  }
+}
+
+docs {
+  Needs `projects:create` (Manager / Admin). Stores the new id as `projectId`.
+}

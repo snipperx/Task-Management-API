@@ -1,0 +1,27 @@
+meta {
+  name: List Tasks
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/tasks?pageSize=20&sort=-createdAt
+  body: none
+  auth: inherit
+}
+
+params:query {
+  pageSize: 20
+  sort: -createdAt
+  ~status: InProgress
+  ~priority: High
+  ~projectId: {{projectId}}
+  ~assigneeId: {{currentUserId}}
+  ~isOverdue: true
+  ~search: auth
+}
+
+docs {
+  Filters: `status`, `priority`, `projectId`, `assigneeId`, `isOverdue`, `search`.
+  `sort`: createdAt | dueDate | priority | title | status — prefix `-` for descending.
+}

@@ -1,0 +1,9 @@
+﻿{
+  Status: 400,
+  Message: One or more validation errors occurred.,
+  Errors: {
+    Name: [
+      The field Name must be a string with a minimum length of 3 and a maximum length of 150.
+    ]
+  }
+}

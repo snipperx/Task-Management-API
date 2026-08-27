@@ -1,0 +1,23 @@
+meta {
+  name: Update User
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/users/{{userId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "firstName": "Sarah",
+    "lastName": "Developer",
+    "isActive": true
+  }
+}
+
+docs {
+  Needs `users:manage` (Admin).
+}

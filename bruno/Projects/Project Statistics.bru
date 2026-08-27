@@ -1,0 +1,15 @@
+meta {
+  name: Project Statistics
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/projects/{{projectId}}/statistics
+  body: none
+  auth: inherit
+}
+
+docs {
+  Needs `reports:view` (Manager / Admin).
+}

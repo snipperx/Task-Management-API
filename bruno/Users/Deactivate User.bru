@@ -1,0 +1,16 @@
+meta {
+  name: Deactivate User
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/users/{{userId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  Soft-deactivate. 409 if you target your own account. Needs `users:manage` (Admin).
+  `userId` defaults to the first user from List Users — point it elsewhere before sending.
+}

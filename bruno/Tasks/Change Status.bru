@@ -1,0 +1,22 @@
+meta {
+  name: Change Status
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/api/tasks/{{taskId}}/status
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "status": "InProgress"
+  }
+}
+
+docs {
+  Workflow: ToDo -> InProgress -> InReview -> Done. Single-step moves backward are allowed;
+  skipping a state returns 409. Needs `tasks:status-update`.
+}

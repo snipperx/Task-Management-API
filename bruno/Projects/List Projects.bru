@@ -1,0 +1,29 @@
+meta {
+  name: List Projects
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/projects?pageNumber=1&pageSize=20&status=Active
+  body: none
+  auth: inherit
+}
+
+params:query {
+  pageNumber: 1
+  pageSize: 20
+  status: Active
+  ~search: platform
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.items.length > 0) {
+    bru.setEnvVar("projectId", res.body.items[0].id);
+  }
+}
+
+docs {
+  `status`: Active | Completed | Archived. `search` matches name/description.
+  Stores the first result's id as `projectId`.
+}

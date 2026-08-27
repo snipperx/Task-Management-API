@@ -1,0 +1,17 @@
+meta {
+  name: Project Tasks
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/projects/{{projectId}}/tasks?pageSize=50
+  body: none
+  auth: inherit
+}
+
+params:query {
+  pageSize: 50
+  ~status: InProgress
+  ~priority: High
+}

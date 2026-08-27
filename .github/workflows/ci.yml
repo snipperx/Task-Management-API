@@ -93,3 +93,8 @@ jobs:
             sleep 2
           done
           echo "API did not become healthy"; docker logs api; exit 1
+
+      - name: k6 smoke test
+        run: |
+          docker run --rm --network host -e BASE_URL=http://localhost:5000 \
+            -v "$PWD/load:/load" grafana/k6 run /load/smoke.js

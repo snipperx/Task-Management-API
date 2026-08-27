@@ -1,0 +1,43 @@
+meta {
+  name: Create Task
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/tasks
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "Bruno task",
+    "description": "Created from the Bruno collection",
+    "projectId": "{{projectId}}",
+    "priority": "Medium",
+    "estimatedHours": 4,
+    "dueDate": "2030-01-01T00:00:00Z"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:pre-request {
+  if (!bru.getEnvVar("projectId")) {
+    throw new Error("Run Projects / List Projects (or Create Project) first to set projectId");
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("taskId", res.body.id);
+  }
+}
+
+docs {
+  `priority`: Low | Medium | High | Critical. `dueDate` must be in the future (else 400).
+  Needs `tasks:create`. Stores the new id as `taskId`.
+}

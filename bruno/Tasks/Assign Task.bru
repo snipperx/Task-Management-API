@@ -1,0 +1,21 @@
+meta {
+  name: Assign Task
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/api/tasks/{{taskId}}/assign
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "assigneeId": "{{currentUserId}}"
+  }
+}
+
+docs {
+  `assigneeId: null` unassigns. Needs `tasks:assign` (Manager / Admin).
+}
