@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  DOTNET_NOLOGO: "true"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+          POSTGRES_DB: TaskManagement
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test (+ coverage)
+        run: >-
+          dotnet test --configuration Release --no-build
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+          --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test + coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:coveragereport -reporttypes:"TextSummary;Html"
+          cat coveragereport/Summary.txt >> "$GITHUB_STEP_SUMMARY" || true
+
+  docker:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f src/TaskManagementAPI/Dockerfile -t taskmanagement-api:${{ github.sha }} .
+
+      - name: Smoke-test the image
+        run: |
+          docker network create tm || true
+          docker run -d --name pg --network tm \
+            -e POSTGRES_PASSWORD=postgres123 -e POSTGRES_DB=TaskManagement postgres:16-alpine
+          for i in $(seq 1 20); do docker exec pg pg_isready -U postgres && break; sleep 2; done
+          docker run -d --name api --network tm -p 5000:8080 \
+            -e ConnectionStrings__DefaultConnection="Host=pg;Database=TaskManagement;Username=postgres;Password=postgres123" \
+            -e JwtSettings__Secret="ci-smoke-secret-key-that-is-definitely-long-enough-123" \
+            taskmanagement-api:${{ github.sha }}
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/health || true)
+            [ "$code" = "200" ] && echo "healthy" && exit 0
+            sleep 2
+          done
+          echo "API did not become healthy"; docker logs api; exit 1

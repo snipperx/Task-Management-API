@@ -1,0 +1,64 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/TaskManagementAPI/Dockerfile
+    container_name: taskmanagement-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${DB_NAME:-TaskManagement};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres123}"
+      JwtSettings__Secret: ${JWT_SECRET:?JWT_SECRET must be set (min 32 chars)}
+      JwtSettings__Issuer: ${JWT_ISSUER:-taskmanagement-api}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-taskmanagement-client}
+      Swagger__Enabled: "true"
+      SeedOnStartup: "true"
+    ports:
+      - "5000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - taskmanagement
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskmanagement-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+      POSTGRES_DB: ${DB_NAME:-TaskManagement}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-TaskManagement}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - taskmanagement
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: taskmanagement-pgadmin
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@company.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - taskmanagement
+
+volumes:
+  postgres_data:
+
+networks:
+  taskmanagement:
+    driver: bridge

@@ -1,0 +1,122 @@
+@host = http://localhost:5080
+
+### Login (seeded admin) — copy accessToken into @token below
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "admin@company.com", "password": "Admin@123" }
+
+###
+@token = {{login.response.body.accessToken}}
+@refreshToken = {{login.response.body.refreshToken}}
+
+### Register a new user (always becomes Developer)
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "email": "new.dev@company.com", "password": "Sup3rSecret!", "firstName": "New", "lastName": "Dev" }
+
+### Refresh token pair
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{ "accessToken": "{{token}}", "refreshToken": "{{refreshToken}}" }
+
+### Change password
+POST {{host}}/api/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "currentPassword": "Admin@123", "newPassword": "Admin@1234" }
+
+### List users (users:view — Admin/Manager)
+GET {{host}}/api/users?pageNumber=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### List projects
+# @name projects
+GET {{host}}/api/projects?status=Active
+Authorization: Bearer {{token}}
+
+###
+@projectId = {{projects.response.body.items[0].id}}
+
+### Create project (projects:create)
+POST {{host}}/api/projects
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "New Initiative", "description": "Something worth doing" }
+
+### Project statistics
+GET {{host}}/api/projects/{{projectId}}/statistics
+Authorization: Bearer {{token}}
+
+### Create task
+# @name task
+POST {{host}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Wire up CI pipeline",
+  "description": "GitHub Actions build + test + docker",
+  "projectId": "{{projectId}}",
+  "priority": "High",
+  "estimatedHours": 6
+}
+
+###
+@taskId = {{task.response.body.id}}
+
+### List / filter tasks
+GET {{host}}/api/tasks?status=InProgress&priority=High&sort=-dueDate&pageNumber=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### Overdue tasks
+GET {{host}}/api/tasks/overdue
+Authorization: Bearer {{token}}
+
+### Global task statistics
+GET {{host}}/api/tasks/statistics
+Authorization: Bearer {{token}}
+
+### Move task status (ToDo -> InProgress). Skipping states returns 409.
+PATCH {{host}}/api/tasks/{{taskId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "InProgress" }
+
+### Assign task (tasks:assign — Admin/Manager). null unassigns.
+PATCH {{host}}/api/tasks/{{taskId}}/assign
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "assigneeId": null }
+
+### Change priority
+PATCH {{host}}/api/tasks/{{taskId}}/priority
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "priority": "Critical" }
+
+### Add comment
+POST {{host}}/api/tasks/{{taskId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "content": "Started on this today." }
+
+### List comments
+GET {{host}}/api/tasks/{{taskId}}/comments
+Authorization: Bearer {{token}}
+
+### Soft-delete task (tasks:delete — Admin/Manager)
+DELETE {{host}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+
+### Health
+GET {{host}}/health

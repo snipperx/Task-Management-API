@@ -1,0 +1,31 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+publish/
+
+## Test / coverage
+[Tt]est[Rr]esults/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+coveragereport/
+
+## Env / secrets
+.env
+*.env.local
+appsettings.*.Local.json
+src/TaskManagementAPI/appsettings.Local.json
+
+## IDE
+.idea/
+.vscode/
+*.DotSettings.user
+
+## OS
+.DS_Store
+Thumbs.db
