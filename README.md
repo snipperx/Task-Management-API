@@ -17,6 +17,7 @@ progress per project and across the board.
 - [Configuration](#configuration)
 - [Authentication & roles](#authentication--roles)
 - [API reference](#api-reference)
+- [Trying the API (Bruno / .http)](#trying-the-api-bruno--http)
 - [Business rules](#business-rules)
 - [Testing](#testing)
 - [Seed data / test credentials](#seed-data--test-credentials)
@@ -43,6 +44,9 @@ src/TaskManagementAPI/
 tests/TaskManagementAPI.Tests/
 ├── Unit/               xUnit + Moq — services & workflow rules
 └── Integration/        WebApplicationFactory + EF InMemory — controller/auth flows
+
+bruno/                  Bruno API collection (every endpoint, Local + Docker environments)
+http/                   .http request files for VS Code REST Client / Rider / VS 2022
 ```
 
 Layering: `Controller → Service → Repository/DbContext`. Controllers never touch `DbContext`
@@ -216,6 +220,22 @@ All handled errors return:
 ```
 
 `400` validation · `401` bad credentials/token · `403` not permitted · `404` missing · `409` business-rule violation · `500` unexpected (details only in Development).
+
+---
+
+## Trying the API (Bruno / .http)
+
+Besides Swagger (`/swagger`), the repo ships two ready-to-run request collections. Both default to
+the **Local** environment (`http://localhost:5252`) and carry a **Docker** environment
+(`http://localhost:5000`); both are pre-filled with the seed logins.
+
+- **`bruno/`** — a [Bruno](https://www.usebruno.com/) collection covering every endpoint. Open the
+  folder in Bruno, pick an environment, run **Auth / Login** once (a post-response script stores the
+  token) and every other request inherits it.
+- **`http/`** — `.http` files (`auth`, `projects`, `tasks`, `comments`, `users`) for the **VS Code
+  REST Client**, **JetBrains Rider/IntelliJ**, and **Visual Studio 2022** HTTP clients. Select the
+  `local` env, run the `# @name login` request in a file, then send the rest. See
+  [`http/README.md`](http/README.md).
 
 ---
 
