@@ -1,0 +1,56 @@
+### Task Management API — Comments (edit / delete)
+# Create + list live under /api/tasks/{taskId}/comments (see tasks.http).
+# /api/comments/{id} is edit/delete only, and only the comment's author may use it.
+
+@contentType = {{contentType}}
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+###
+@token = {{login.response.body.$.accessToken}}
+
+### Set up: a task + a comment authored by this user
+# @name projects
+GET {{baseUrl}}/api/projects?status=Active&pageSize=1
+Authorization: Bearer {{token}}
+
+###
+# @name createTask
+POST {{baseUrl}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "Comment host task",
+  "projectId": "{{projects.response.body.$.items[0].id}}",
+  "priority": "Low"
+}
+
+###
+# @name createComment
+POST {{baseUrl}}/api/tasks/{{createTask.response.body.$.id}}/comments
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "content": "Original comment text" }
+
+###
+@commentId = {{createComment.response.body.$.id}}
+
+### Edit a comment (author only — 403 otherwise)
+PUT {{baseUrl}}/api/comments/{{commentId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "content": "Edited comment text" }
+
+### Delete a comment (author only)
+DELETE {{baseUrl}}/api/comments/{{commentId}}
+Authorization: Bearer {{token}}

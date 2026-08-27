@@ -1,0 +1,21 @@
+headers {
+  Content-Type: application/json
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+docs {
+  # Task Management API
+
+  Collection-level bearer auth uses `{{accessToken}}`, set by the **Auth / Login** requests'
+  post-response script. Run a login request first, then any other request inherits the token
+  (`auth: inherit`). Auth endpoints themselves use `auth: none`.
+
+  Select an environment (**Local** or **Docker**) before sending.
+}

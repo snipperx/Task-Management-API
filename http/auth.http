@@ -1,0 +1,70 @@
+### Task Management API — Auth flows
+# Pick an environment first: VS Code REST Client status-bar env picker, or Rider's env dropdown.
+# Requests below use variables from http-client.env.json (local / docker).
+
+@contentType = {{contentType}}
+
+### Health check (no auth)
+GET {{baseUrl}}/health
+
+### Register a brand-new user (self-registration always yields the Developer role)
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "newuser@example.com",
+  "password": "Sup3rSecret!",
+  "firstName": "New",
+  "lastName": "User"
+}
+
+### Log in as the seeded admin — captures tokens for every request below
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@accessToken = {{login.response.body.$.accessToken}}
+@refreshToken = {{login.response.body.$.refreshToken}}
+
+### Log in as other seeded roles (swap the vars to test RBAC)
+# @name loginManager
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+### Smoke a protected endpoint with the captured token
+GET {{baseUrl}}/api/tasks?pageSize=1
+Authorization: Bearer {{accessToken}}
+
+### Refresh the token pair
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "accessToken": "{{accessToken}}",
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Change password (invalidates the current refresh token)
+POST {{baseUrl}}/api/auth/change-password
+Authorization: Bearer {{accessToken}}
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "{{adminPassword}}",
+  "newPassword": "Admin@1234"
+}
+
+### Log out (revokes the refresh token)
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{accessToken}}

@@ -1,0 +1,61 @@
+### Task Management API — Projects
+# Each resource file logs in independently (REST Client variables are file-scoped).
+
+@contentType = {{contentType}}
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+###
+@token = {{login.response.body.$.accessToken}}
+
+### List projects (paged) — filters: status=Active|Completed|Archived, search=
+GET {{baseUrl}}/api/projects?pageNumber=1&pageSize=20&status=Active
+Authorization: Bearer {{token}}
+
+### Create a project — captures its id
+# @name createProject
+POST {{baseUrl}}/api/projects
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "REST Client Project",
+  "description": "Created from projects.http"
+}
+
+###
+@projectId = {{createProject.response.body.$.id}}
+
+### Get one project
+GET {{baseUrl}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+
+### Update a project (status: Active|Completed|Archived)
+PUT {{baseUrl}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "REST Client Project (renamed)",
+  "description": "Updated from projects.http",
+  "status": "Active"
+}
+
+### Tasks in a project (same filters as /api/tasks)
+GET {{baseUrl}}/api/projects/{{projectId}}/tasks?pageSize=50
+Authorization: Bearer {{token}}
+
+### Project statistics (needs reports:view — Manager/Admin)
+GET {{baseUrl}}/api/projects/{{projectId}}/statistics
+Authorization: Bearer {{token}}
+
+### Delete a project (409 if it still has active tasks)
+DELETE {{baseUrl}}/api/projects/{{projectId}}
+Authorization: Bearer {{token}}

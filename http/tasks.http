@@ -1,0 +1,114 @@
+### Task Management API — Tasks (+ nested comments)
+
+@contentType = {{contentType}}
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{managerEmail}}",
+  "password": "{{managerPassword}}"
+}
+
+###
+@token = {{login.response.body.$.accessToken}}
+
+### Grab a project to hang tasks off
+# @name projects
+GET {{baseUrl}}/api/projects?status=Active&pageSize=1
+Authorization: Bearer {{token}}
+
+###
+@projectId = {{projects.response.body.$.items[0].id}}
+
+### List tasks — filters: status, priority, projectId, assigneeId, isOverdue, search, sort
+# sort: createdAt|dueDate|priority|title|status  (prefix '-' for descending)
+GET {{baseUrl}}/api/tasks?pageSize=20&sort=-createdAt
+Authorization: Bearer {{token}}
+
+### Overdue tasks
+GET {{baseUrl}}/api/tasks/overdue
+Authorization: Bearer {{token}}
+
+### Task statistics (reports:view). Optional ?projectId=
+GET {{baseUrl}}/api/tasks/statistics
+Authorization: Bearer {{token}}
+
+### Create a task — priority: Low|Medium|High|Critical, dueDate must be in the future
+# @name createTask
+POST {{baseUrl}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "REST Client task",
+  "description": "Created from tasks.http",
+  "projectId": "{{projectId}}",
+  "priority": "Medium",
+  "estimatedHours": 4,
+  "dueDate": "2030-01-01T00:00:00Z"
+}
+
+###
+@taskId = {{createTask.response.body.$.id}}
+
+### Get one task
+GET {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+
+### Update task fields
+PUT {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "REST Client task (edited)",
+  "description": "Updated",
+  "estimatedHours": 6,
+  "actualHours": 2,
+  "dueDate": "2030-02-01T00:00:00Z"
+}
+
+### Change status — workflow: ToDo -> InProgress -> InReview -> Done (single-step back allowed)
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/status
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "status": "InProgress" }
+
+### Change priority
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/priority
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "priority": "High" }
+
+### Assign the task (assigneeId: null unassigns)
+# @name users
+GET {{baseUrl}}/api/users?pageSize=50
+Authorization: Bearer {{token}}
+
+###
+PATCH {{baseUrl}}/api/tasks/{{taskId}}/assign
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "assigneeId": "{{users.response.body.$.items[0].id}}" }
+
+### --- nested comments ---
+
+### List comments on a task
+GET {{baseUrl}}/api/tasks/{{taskId}}/comments
+Authorization: Bearer {{token}}
+
+### Add a comment
+POST {{baseUrl}}/api/tasks/{{taskId}}/comments
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "content": "Comment from tasks.http" }
+
+### Delete the task (soft delete)
+DELETE {{baseUrl}}/api/tasks/{{taskId}}
+Authorization: Bearer {{token}}

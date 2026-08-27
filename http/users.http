@@ -1,0 +1,48 @@
+### Task Management API — Users (Admin / Manager)
+
+@contentType = {{contentType}}
+
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@token = {{login.response.body.$.accessToken}}
+
+### List users (users:view) — paged
+GET {{baseUrl}}/api/users?pageNumber=1&pageSize=50
+Authorization: Bearer {{token}}
+
+###
+@userId = {{login.response.body.$.user.id}}
+
+### Get one user
+GET {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Update a user (users:manage)
+PUT {{baseUrl}}/api/users/{{userId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "firstName": "Admin",
+  "lastName": "User",
+  "isActive": true
+}
+
+### Assign a role (users:manage) — role: Viewer|Developer|Manager|Admin
+POST {{baseUrl}}/api/users/{{userId}}/roles
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{ "role": "Admin" }
+
+### Deactivate a user (soft delete). You cannot delete your own account (409).
+# DELETE {{baseUrl}}/api/users/{{userId}}
+# Authorization: Bearer {{token}}
