@@ -303,3 +303,8 @@ Plus 3 projects (one Completed) and 5 tasks spanning every status/priority, incl
 - Behind TLS termination the app enables HTTPS redirection automatically outside Development.
 - `.github/workflows/ci.yml` builds, tests (with a Postgres service), collects coverage, and
   builds the Docker image on every push/PR.
+
+---
+
+<sub>README rendering verified against GitHub-flavored Markdown (headings, TOC anchors, tables and
+fenced code blocks) on 2026-08-27.</sub>
