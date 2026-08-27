@@ -129,6 +129,126 @@ public class TaskServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_filters_sorts_and_paginates()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var dev = db.AddUser(UserRole.Developer);
+        var project = db.AddProject(manager.Id);
+
+        db.AddTask(project.Id, manager.Id, assignedTo: dev.Id, status: WorkItemStatus.InProgress, priority: TaskPriority.High);
+        db.AddTask(project.Id, manager.Id, assignedTo: dev.Id, status: WorkItemStatus.InProgress, priority: TaskPriority.Low);
+        db.AddTask(project.Id, manager.Id, status: WorkItemStatus.ToDo, priority: TaskPriority.Critical);
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        var inProgress = await svc.GetAsync(new TaskQuery { Status = WorkItemStatus.InProgress, AssigneeId = dev.Id });
+        Assert.Equal(2, inProgress.TotalCount);
+
+        var sorted = await svc.GetAsync(new TaskQuery { ProjectId = project.Id, Sort = "-priority", PageSize = 2 });
+        Assert.Equal(3, sorted.TotalCount);
+        Assert.Equal(2, sorted.Items.Count);
+        Assert.Equal(TaskPriority.Critical, sorted.Items[0].Priority);
+
+        var search = await svc.GetAsync(new TaskQuery { Search = sorted.Items[0].Title[..8] });
+        Assert.True(search.TotalCount >= 1);
+    }
+
+    [Fact]
+    public async Task GetOverdueAsync_returns_only_open_past_due_tasks()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var project = db.AddProject(manager.Id);
+        db.AddTask(project.Id, manager.Id, dueDate: DateTime.UtcNow.Date.AddDays(-2));
+        db.AddTask(project.Id, manager.Id, status: WorkItemStatus.Done, dueDate: DateTime.UtcNow.Date.AddDays(-2));
+        db.AddTask(project.Id, manager.Id, dueDate: DateTime.UtcNow.Date.AddDays(3));
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        var overdue = await svc.GetOverdueAsync();
+
+        Assert.Single(overdue);
+        Assert.True(overdue[0].IsOverdue);
+    }
+
+    [Fact]
+    public async Task AssignAsync_can_assign_and_unassign()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var dev = db.AddUser(UserRole.Developer);
+        var project = db.AddProject(manager.Id);
+        var task = db.AddTask(project.Id, manager.Id);
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        var assigned = await svc.AssignAsync(task.Id, dev.Id);
+        Assert.Equal(dev.Id, assigned.AssignedTo);
+
+        var unassigned = await svc.AssignAsync(task.Id, null);
+        Assert.Null(unassigned.AssignedTo);
+    }
+
+    [Fact]
+    public async Task AssignAsync_unknown_assignee_throws_Validation()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var project = db.AddProject(manager.Id);
+        var task = db.AddTask(project.Id, manager.Id);
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        await Assert.ThrowsAsync<ValidationException>(() => svc.AssignAsync(task.Id, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task ChangePriorityAsync_updates_priority()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var project = db.AddProject(manager.Id);
+        var task = db.AddTask(project.Id, manager.Id, priority: TaskPriority.Low);
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        var dto = await svc.ChangePriorityAsync(task.Id, TaskPriority.Critical);
+
+        Assert.Equal(TaskPriority.Critical, dto.Priority);
+    }
+
+    [Fact]
+    public async Task GetStatisticsAsync_scopes_to_project_when_given()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var p1 = db.AddProject(manager.Id);
+        var p2 = db.AddProject(manager.Id);
+        db.AddTask(p1.Id, manager.Id, status: WorkItemStatus.Done);
+        db.AddTask(p1.Id, manager.Id, status: WorkItemStatus.ToDo);
+        db.AddTask(p2.Id, manager.Id, status: WorkItemStatus.ToDo);
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        var scoped = await svc.GetStatisticsAsync(p1.Id);
+        Assert.Equal(2, scoped.TotalTasks);
+        Assert.Equal(50d, scoped.CompletionRate);
+
+        var all = await svc.GetStatisticsAsync(null);
+        Assert.Equal(3, all.TotalTasks);
+    }
+
+    [Fact]
+    public async Task CreateAsync_past_due_date_throws_Validation()
+    {
+        using var db = new TestDb();
+        var manager = db.AddUser(UserRole.Manager);
+        var project = db.AddProject(manager.Id);
+        var svc = Build(db, manager.Id, UserRole.Manager);
+
+        await Assert.ThrowsAsync<ValidationException>(() => svc.CreateAsync(new CreateTaskRequest
+        {
+            Title = "late", ProjectId = project.Id, Priority = TaskPriority.Low,
+            DueDate = DateTime.UtcNow.Date.AddDays(-1)
+        }));
+    }
+
+    [Fact]
     public async Task DeleteAsync_is_soft_delete()
     {
         using var db = new TestDb();

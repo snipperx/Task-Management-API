@@ -241,16 +241,20 @@ All handled errors return:
 ```bash
 dotnet test
 
-# with coverage
-dotnet test --collect:"XPlat Code Coverage"
+# with coverage (runsettings excludes generated EF migrations)
+dotnet test --settings coverlet.runsettings --collect:"XPlat Code Coverage"
 # HTML report (needs: dotnet tool install -g dotnet-reportgenerator-globaltool)
 reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:coveragereport
 ```
 
-- **Unit** (`tests/.../Unit`) — `TaskService`/`ProjectService`/`AuthService` rules with mocked
-  repositories; `TaskWorkflow` transition matrix (`[Theory]`).
+70 tests, ~90% line coverage (services 90–100%, controllers 95–100%).
+
+- **Unit** (`tests/.../Unit`) — `TaskService` / `ProjectService` / `AuthService` / `UserService` /
+  `CommentService` rules and the `OverdueTaskEscalator`, each against an isolated EF-InMemory context;
+  `TaskWorkflow` transition matrix (`[Theory]`).
 - **Integration** (`tests/.../Integration`) — boots the app via `WebApplicationFactory` against an
-  EF-InMemory database and exercises register/login, authz failures, and an end-to-end task flow.
+  EF-InMemory database and exercises the auth lifecycle (register / login / refresh / logout /
+  change-password), RBAC failures, the full task workflow, and the users/projects/comments endpoints.
 
 ---
 

@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<ICommentService, CommentService>();
 
+        services.AddScoped<IOverdueTaskEscalator, OverdueTaskEscalator>();
         services.AddHostedService<OverdueEscalationService>();
         return services;
     }

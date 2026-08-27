@@ -116,6 +116,100 @@ public class AuthAndTaskApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Logout_then_refresh_with_old_token_is_rejected()
+    {
+        var email = $"lo-{Guid.NewGuid():N}@test.local";
+        await _client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email, password = "Sup3rSecret!", firstName = "Log", lastName = "Out"
+        });
+        var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = "Sup3rSecret!" });
+        var pair = await login.Content.ReadFromJsonAsync<AuthResponse>(Json);
+
+        Authorize(pair!.AccessToken);
+        var logout = await _client.PostAsync("/api/auth/logout", null);
+        Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
+
+        var refresh = await _client.PostAsJsonAsync("/api/auth/refresh", new
+        {
+            accessToken = pair.AccessToken, refreshToken = pair.RefreshToken
+        });
+        Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
+    }
+
+    [Fact]
+    public async Task Change_password_updates_credentials()
+    {
+        var email = $"cp-{Guid.NewGuid():N}@test.local";
+        await _client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email, password = "OldPass123!", firstName = "Ch", lastName = "Pw"
+        });
+        Authorize(await LoginAsync(email, "OldPass123!"));
+
+        var change = await _client.PostAsJsonAsync("/api/auth/change-password", new
+        {
+            currentPassword = "OldPass123!", newPassword = "BrandNew123!"
+        });
+        Assert.Equal(HttpStatusCode.NoContent, change.StatusCode);
+
+        var oldLogin = await _client.PostAsJsonAsync("/api/auth/login", new { email, password = "OldPass123!" });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldLogin.StatusCode);
+
+        var newToken = await LoginAsync(email, "BrandNew123!");
+        Assert.False(string.IsNullOrWhiteSpace(newToken));
+    }
+
+    [Fact]
+    public async Task Task_statistics_priority_assign_and_overdue_endpoints()
+    {
+        Authorize(await LoginAsync("manager@company.com", "Manager@123"));
+        var projects = await _client.GetFromJsonAsync<PagedResult<ProjectDto>>("/api/projects?status=Active", Json);
+        var projectId = projects!.Items[0].Id;
+
+        var task = await (await _client.PostAsJsonAsync("/api/tasks", new
+        {
+            title = "Endpoint coverage task", projectId, priority = "Low"
+        })).Content.ReadFromJsonAsync<TaskDto>(Json);
+
+        var prio = await _client.PatchAsJsonAsync($"/api/tasks/{task!.Id}/priority", new { priority = "High" });
+        prio.EnsureSuccessStatusCode();
+        Assert.Equal(TaskPriority.High, (await prio.Content.ReadFromJsonAsync<TaskDto>(Json))!.Priority);
+
+        var users = await _client.GetFromJsonAsync<PagedResult<UserDto>>("/api/users?pageSize=50", Json);
+        var devId = users!.Items.First(u => u.Email == "dev1@company.com").Id;
+        var assign = await _client.PatchAsJsonAsync($"/api/tasks/{task.Id}/assign", new { assigneeId = devId });
+        assign.EnsureSuccessStatusCode();
+        Assert.Equal(devId, (await assign.Content.ReadFromJsonAsync<TaskDto>(Json))!.AssignedTo);
+
+        var stats = await _client.GetFromJsonAsync<TaskStatisticsDto>("/api/tasks/statistics", Json);
+        Assert.True(stats!.TotalTasks >= 1);
+
+        var scoped = await _client.GetFromJsonAsync<TaskStatisticsDto>($"/api/tasks/statistics?projectId={projectId}", Json);
+        Assert.True(scoped!.TotalTasks >= 1);
+
+        var overdue = await _client.GetAsync("/api/tasks/overdue");
+        Assert.Equal(HttpStatusCode.OK, overdue.StatusCode);
+
+        var del = await _client.DeleteAsync($"/api/tasks/{task.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
+
+        var gone = await _client.GetAsync($"/api/tasks/{task.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
+    }
+
+    [Fact]
+    public async Task Project_task_list_endpoint_is_scoped()
+    {
+        Authorize(await LoginAsync("dev1@company.com", "Dev@123"));
+        var projects = await _client.GetFromJsonAsync<PagedResult<ProjectDto>>("/api/projects", Json);
+        var projectId = projects!.Items[0].Id;
+
+        var scoped = await _client.GetFromJsonAsync<PagedResult<TaskDto>>($"/api/projects/{projectId}/tasks", Json);
+        Assert.All(scoped!.Items, t => Assert.Equal(projectId, t.ProjectId));
+    }
+
+    [Fact]
     public async Task Past_due_date_is_rejected_with_400()
     {
         Authorize(await LoginAsync("manager@company.com", "Manager@123"));
