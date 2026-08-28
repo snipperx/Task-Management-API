@@ -267,7 +267,7 @@ dotnet test --settings coverlet.runsettings --collect:"XPlat Code Coverage"
 reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:coveragereport
 ```
 
-70 tests, ~90% line coverage (services 90–100%, controllers 95–100%).
+78 tests, ~90% line coverage (services 90–100%, controllers 95–100%).
 
 - **Unit** (`tests/.../Unit`) — `TaskService` / `ProjectService` / `AuthService` / `UserService` /
   `CommentService` rules and the `OverdueTaskEscalator`, each against an isolated EF-InMemory context;
@@ -275,6 +275,26 @@ reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:coveragereport
 - **Integration** (`tests/.../Integration`) — boots the app via `WebApplicationFactory` against an
   EF-InMemory database and exercises the auth lifecycle (register / login / refresh / logout /
   change-password), RBAC failures, the full task workflow, and the users/projects/comments endpoints.
+- **Real-database integration** (`Integration/RealDatabaseApiTests`) — the same style against a
+  throw-away **PostgreSQL container** ([Testcontainers](https://dotnet.testcontainers.org/)), so real
+  Npgsql, real EF migrations and the real seeder run. [Respawn](https://github.com/jbogard/Respawn)
+  truncates + reseeds between tests; [Bogus](https://github.com/bchavez/Bogus) generates payloads.
+  **Needs Docker.**
+- **Error-contract snapshots** (`Integration/ErrorContractTests`) — [Verify](https://github.com/VerifyTests/Verify)
+  pins the shape of the shared `ErrorResponse` body for 400/404/409. Update snapshots by reviewing
+  the `*.received.txt` next to each `*.verified.txt`.
+
+### Load & smoke (k6)
+
+[`load/`](load/README.md) holds [k6](https://k6.io/) scripts that drive the running API:
+
+```bash
+k6 run load/smoke.js                                  # 1 VU critical-path check (CI gate)
+k6 run -e VUS=50 load/load.js                         # ramping load with p95 latency thresholds
+k6 run -e BASE_URL=http://localhost:5000 load/smoke.js  # against docker compose
+```
+
+CI runs `smoke.js` against the built image in the `docker` job.
 
 ---
 

@@ -1,6 +1,6 @@
 // Load test: ramping read-heavy traffic with a slice of writes.
 //   k6 run load/load.js
-//   k6 run -e BASE_URL=http://localhost:5000 -e RATE=50 load/load.js
+//   k6 run -e BASE_URL=http://localhost:5000 -e VUS=50 load/load.js
 import http from 'k6/http';
 import { check, group, sleep } from 'k6';
 import { Trend } from 'k6/metrics';
@@ -29,17 +29,14 @@ export const options = {
   },
 };
 
-// One login per VU, reused across iterations.
+// Shared manager token for the write path (so cleanup deletes are permitted), plus a project id.
 export function setup() {
-  return { projectId: seedProjectId() };
+  const managerToken = login('manager');
+  const res = http.get(`${BASE_URL}/api/projects?status=Active&pageSize=1`, authHeaders(managerToken));
+  return { managerToken, projectId: res.json('items.0.id') };
 }
 
-function seedProjectId() {
-  const token = login('manager');
-  const res = http.get(`${BASE_URL}/api/projects?status=Active&pageSize=1`, authHeaders(token));
-  return res.json('items.0.id');
-}
-
+// One login per VU, reused across that VU's iterations.
 let vuToken;
 
 export default function (data) {
@@ -55,15 +52,16 @@ export default function (data) {
     check(list, { 'list 200': (r) => r.status === 200 });
 
     const stats = http.get(`${BASE_URL}/api/tasks/statistics`, tagged('GET /api/tasks/statistics', auth));
-    check(stats, { 'stats ok': (r) => r.status === 200 || r.status === 403 });
+    check(stats, { 'stats 200': (r) => r.status === 200 });
 
     const overdue = http.get(`${BASE_URL}/api/tasks/overdue`, tagged('GET /api/tasks/overdue', auth));
     check(overdue, { 'overdue 200': (r) => r.status === 200 });
   });
 
-  // ~15% of iterations also write.
+  // ~15% of iterations also write — always as the manager so RBAC never trips.
   if (Math.random() < 0.15) {
     group('write', () => {
+      const mgr = authHeaders(data.managerToken);
       const create = http.post(
         `${BASE_URL}/api/tasks`,
         JSON.stringify({
@@ -72,11 +70,18 @@ export default function (data) {
           priority: 'Medium',
           estimatedHours: 2,
         }),
-        tagged('POST /api/tasks', auth),
+        tagged('POST /api/tasks', mgr),
       );
-      const ok = check(create, { 'create 201/403': (r) => r.status === 201 || r.status === 403 });
-      if (ok && create.status === 201) {
-        http.del(`${BASE_URL}/api/tasks/${create.json('id')}`, null, tagged('DELETE /api/tasks/:id', auth));
+      const created = check(create, { 'create 201': (r) => r.status === 201 });
+      if (created) {
+        const id = create.json('id');
+        const move = http.patch(
+          `${BASE_URL}/api/tasks/${id}/status`,
+          JSON.stringify({ status: 'InProgress' }),
+          tagged('PATCH /api/tasks/:id/status', mgr),
+        );
+        check(move, { 'status 200': (r) => r.status === 200 });
+        http.del(`${BASE_URL}/api/tasks/${id}`, null, tagged('DELETE /api/tasks/:id', mgr));
       }
     });
   }
